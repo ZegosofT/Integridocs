@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { jsPDF } from "jspdf";
 
 interface Client {
   id: number;
@@ -45,12 +46,12 @@ interface Client {
   hebergeur_dns: string;
   type_licence: string;
   sauvegarde_365_active: boolean | string;
+  notes: string;
 }
 
 const SECTIONS = [
   {
-    title: "Réseau & Infrastructure",
-    colorClass: "section-reseau",
+    title: "Réseau & Infrastructure", colorClass: "section-reseau",
     fields: [
       { key: "fournisseur_internet",   label: "Fournisseur Internet",   type: "text" },
       { key: "type_lien",              label: "Type de lien",           type: "text" },
@@ -68,8 +69,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Serveurs & Stockage",
-    colorClass: "section-serveurs",
+    title: "Serveurs & Stockage", colorClass: "section-serveurs",
     fields: [
       { key: "serveur_nas",            label: "Serveur / NAS",          type: "text" },
       { key: "adresse_ip_nas",         label: "IP NAS",                 type: "text" },
@@ -79,8 +79,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Périphériques",
-    colorClass: "section-peripheriques",
+    title: "Périphériques", colorClass: "section-peripheriques",
     fields: [
       { key: "imprimante_modele",       label: "Modèle imprimante",       type: "text" },
       { key: "adresse_ip_imprimante",   label: "IP imprimante",           type: "text" },
@@ -89,8 +88,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Téléphonie",
-    colorClass: "section-telephonie",
+    title: "Téléphonie", colorClass: "section-telephonie",
     fields: [
       { key: "solution_telephonie", label: "Solution téléphonie", type: "text"   },
       { key: "url_telephonie",      label: "URL téléphonie",      type: "text"   },
@@ -98,8 +96,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Sécurité",
-    colorClass: "section-securite",
+    title: "Sécurité", colorClass: "section-securite",
     fields: [
       { key: "mfa_activee",                  label: "MFA activée",                  type: "bool" },
       { key: "gestion_centralisee",          label: "Gestion centralisée",          type: "text" },
@@ -110,8 +107,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Cloud & Messagerie",
-    colorClass: "section-cloud",
+    title: "Cloud & Messagerie", colorClass: "section-cloud",
     fields: [
       { key: "plateforme_365",        label: "Plateforme 365",        type: "text" },
       { key: "domaine",               label: "Domaine",               type: "text" },
@@ -137,6 +133,7 @@ const ClientDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const router = useRouter();
   const { id } = router.query;
 
@@ -145,15 +142,13 @@ const ClientDetails = () => {
       fetch(`http://4.251.143.40:8000/clients/${id}`)
         .then((res) => res.json())
         .then((data) => setClient(data))
-        .catch((err) => console.error("Erreur chargement client :", err));
+        .catch((err) => console.error(err));
     }
   }, [id]);
 
   if (!client) return <p className="chargement">Chargement...</p>;
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setClient((prev) => (prev ? { ...prev, [name]: value } : prev));
   };
@@ -180,29 +175,175 @@ const ClientDetails = () => {
       });
   };
 
+  const handleDelete = () => {
+    fetch(`http://4.251.143.40:8000/clients/${client.id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then(() => router.push("/"))
+      .catch((err) => console.error(err));
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    // ── En-tête ──────────────────────────────────────
+    doc.setFillColor(27, 42, 74);
+    doc.rect(0, 0, pageW, 22, "F");
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text("INTEGRIDOCS – Fiche client", 10, 14);
+    y = 30;
+
+    // ── Infos de base ────────────────────────────────
+    doc.setFontSize(13);
+    doc.setTextColor(27, 42, 74);
+    doc.setFont("helvetica", "bold");
+    doc.text(client.nom, 10, y);
+    y += 7;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    const meta = [client.adresse, client.telephone, client.contact].filter(Boolean).join("  ·  ");
+    doc.text(meta, 10, y);
+    y += 4;
+    doc.setDrawColor(0, 200, 150);
+    doc.setLineWidth(0.5);
+    doc.line(10, y, pageW - 10, y);
+    y += 6;
+
+    // ── Notes libres ─────────────────────────────────
+    if (client.notes && client.notes.trim()) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(50, 50, 50);
+      doc.text("Notes libres", 10, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      const noteLines = doc.splitTextToSize(client.notes, pageW - 20);
+      doc.text(noteLines, 10, y);
+      y += noteLines.length * 5 + 4;
+    }
+
+    // ── Sections ─────────────────────────────────────
+    const SECTION_COLORS: Record<string, [number,number,number]> = {
+      "Réseau & Infrastructure": [46, 95, 163],
+      "Serveurs & Stockage":     [39, 174, 96],
+      "Périphériques":           [142, 68, 173],
+      "Téléphonie":              [243, 156, 18],
+      "Sécurité":                [232, 76, 106],
+      "Cloud & Messagerie":      [0, 180, 216],
+    };
+
+    SECTIONS.forEach((section) => {
+      // Garder uniquement les champs non vides
+      const filledFields = section.fields.filter((f) => {
+        const val = (client as never)[f.key];
+        return val !== null && val !== undefined && val !== "";
+      });
+      if (filledFields.length === 0) return;
+
+      // Vérifier si on a besoin d'une nouvelle page
+      if (y > 250) { doc.addPage(); y = 15; }
+
+      // Header section
+      const [r, g, b] = SECTION_COLORS[section.title] || [70, 70, 70];
+      doc.setFillColor(r, g, b);
+      doc.rect(10, y, pageW - 20, 7, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(section.title.toUpperCase(), 13, y + 5);
+      y += 10;
+
+      // Lignes de champs
+      filledFields.forEach((field) => {
+        if (y > 270) { doc.addPage(); y = 15; }
+        const val = (client as never)[field.key];
+        let displayVal = "";
+        if (field.type === "bool") {
+          displayVal = (val === true || val === 1 || val === "1" || val === "true") ? "Oui" : "Non";
+        } else {
+          displayVal = String(val);
+        }
+
+        // Fond alterné
+        doc.setFillColor(245, 247, 250);
+        doc.rect(10, y - 4, pageW - 20, 6, "F");
+
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(80, 80, 80);
+        doc.text(field.label, 13, y);
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(30, 30, 30);
+        const valLines = doc.splitTextToSize(displayVal, pageW - 90);
+        doc.text(valLines, 85, y);
+        y += valLines.length > 1 ? valLines.length * 4.5 + 1 : 6;
+      });
+      y += 4;
+    });
+
+    // ── Pied de page ─────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7.5);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont("helvetica", "normal");
+      const date = new Date().toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" });
+      doc.text(`Integritech SAS · Integridocs · Exporté le ${date}`, 10, 290);
+      doc.text(`Page ${i}/${totalPages}`, pageW - 25, 290);
+    }
+
+    doc.save(`fiche_${client.nom.replace(/\s+/g, "_")}.pdf`);
+  };
+
   return (
     <div className="client-page">
 
       <Link href="/" className="retour-lien">← Retour à l&apos;accueil</Link>
 
-      {/* En-tête */}
       <div className="client-header">
         <h1 className="client-nom">{client.nom}</h1>
         <p className="client-meta">
-          {client.entreprise} · {client.adresse} · {client.telephone} · {client.contact}
+          {client.adresse} · {client.telephone} · {client.contact}
         </p>
       </div>
 
-      {/* Messages */}
       {saveMsg === "success" && <div className="alert alert-success">✅ Données sauvegardées avec succès.</div>}
       {saveMsg === "error"   && <div className="alert alert-error">❌ Erreur lors de la sauvegarde.</div>}
 
-      {/* Boutons */}
+      {/* ── Boutons action ── */}
       <div className="boutons">
         {!isEditing ? (
-          <button className="btn btn-modifier" onClick={() => { setIsEditing(true); setSaveMsg(""); }}>
-            ✏️ Modifier
-          </button>
+          <>
+            <button className="btn btn-modifier" onClick={() => { setIsEditing(true); setSaveMsg(""); }}>
+              ✏️ Modifier
+            </button>
+            {!confirmDelete ? (
+              <button className="btn btn-supprimer" onClick={() => setConfirmDelete(true)}>
+                🗑 Supprimer
+              </button>
+            ) : (
+              <>
+                <span className="confirm-texte">Confirmer la suppression ?</span>
+                <button className="btn btn-confirmer-suppr" onClick={handleDelete}>
+                  Oui, supprimer
+                </button>
+                <button className="btn btn-annuler" onClick={() => setConfirmDelete(false)}>
+                  Annuler
+                </button>
+              </>
+            )}
+            <button className="btn btn-pdf" onClick={handleExportPDF}>
+              📄 Export PDF
+            </button>
+          </>
         ) : (
           <>
             <button className="btn btn-enregistrer" onClick={handleSave} disabled={saving}>
@@ -215,7 +356,38 @@ const ClientDetails = () => {
         )}
       </div>
 
-      {/* Sections */}
+      {/* ── Notes libres : visible si rempli ou en mode édition ── */}
+      {(isEditing || (client.notes && client.notes.trim() !== "")) && (
+        <div className="section-bloc section-notes">
+          <div className="section-header">
+            <h2 className="section-titre">Notes libres</h2>
+          </div>
+          <div className="section-body">
+            <table className="champs-table">
+              <tbody>
+                <tr>
+                  <td className="champ-valeur notes-cell">
+                    {isEditing ? (
+                      <textarea
+                        className="champ-textarea"
+                        name="notes"
+                        value={client.notes ?? ""}
+                        onChange={(e) => setClient((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
+                        placeholder="Notes libres, remarques, informations supplémentaires..."
+                        rows={4}
+                      />
+                    ) : (
+                      <span className="notes-lecture">{client.notes}</span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sections ── */}
       {SECTIONS.map((section) => {
         const visibleFields = isEditing
           ? section.fields

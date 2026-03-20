@@ -41,6 +41,14 @@ a:hover {
   margin-bottom: 28px;
 }
 
+/* ── Logo page d'accueil ── */
+.accueil-logo {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .accueil-titre {
   font-size: 28px;
   font-weight: bold;
@@ -276,6 +284,18 @@ a:hover {
   text-decoration: none;
 }
 
+.client-row-clickable {
+  cursor: pointer;
+}
+
+.client-row-clickable:hover td {
+  background-color: #1E3048 !important;
+}
+
+.client-row-clickable:hover .client-nom-cell {
+  color: #00C896;
+}
+
 .clients-count {
   padding: 6px 12px;
   font-size: 11px;
@@ -375,6 +395,8 @@ a:hover {
 .btn-modifier    { background-color: #00C896; color: #0F1923; }
 .btn-enregistrer { background-color: #27AE60; color: #fff; }
 .btn-annuler     { background-color: #2A4060; color: #8FA3B1; }
+.btn-pdf         { background-color: #1E3048; color: #8FA3B1; border: 1px solid #3A5060; }
+.btn-pdf:hover   { color: #ffffff; border-color: #8FA3B1; }
 
 /* ── Sections ── */
 .section-bloc {
@@ -470,6 +492,45 @@ a:hover {
 
 
 
+
+/* ── Section Notes libres ── */
+.section-notes .section-header { background-color: #ffffff; }
+.section-notes .section-header .section-titre { color: #1B2A4A; }
+.section-notes { border-color: #ffffff; }
+.section-notes .section-body { background-color: #111E2C; }
+
+.notes-cell {
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.champ-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #1E3048;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  outline: none;
+  background-color: #182534;
+  color: #D0D8E4;
+  resize: vertical;
+  min-height: 80px;
+  transition: border 0.2s;
+}
+
+.champ-textarea:focus {
+  border-color: #00C896;
+  background-color: #1E3048;
+}
+
+.notes-lecture {
+  color: #D0D8E4;
+  font-size: 13px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 /* ═══════════════════════════════════════════════════════
    NAVBAR – bandeau permanent en haut
    ═══════════════════════════════════════════════════════
@@ -516,9 +577,9 @@ a:hover {
 .navbar-inner {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ← centre les éléments */
+  justify-content: center;
   gap: 14px;
-  width: 100%;               /* ← prend toute la largeur */
+  width: 100%;
 }
 
 .navbar-btn {

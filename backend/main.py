@@ -29,6 +29,21 @@ def get_db_connection():
     except pymysql.MySQLError as e:
         raise HTTPException(status_code=500, detail=f"Erreur connexion MySQL: {e}")
 
+
+# ── Fonction d'insertion de log ──────────────────────────
+def insert_log(cursor, action: str, description: str, client_nom: str = None, client_id: int = None):
+    # Insérer le nouveau log
+    cursor.execute("""
+        INSERT INTO logs (action, description, client_nom, client_id)
+        VALUES (%s, %s, %s, %s)
+    """, (action, description, client_nom, client_id))
+
+    # Supprimer automatiquement les logs de plus de 90 jours
+    cursor.execute("""
+        DELETE FROM logs
+        WHERE created_at < NOW() - INTERVAL 90 DAY
+    """)
+
 @app.get("/")
 def root():
     return {"status": "Backend FastAPI + MySQL OK"}
@@ -56,6 +71,7 @@ def get_clients():
                 clients.telephone,
                 clients.contact,
                 clients.entreprise_id,
+                clients.created_at,
                 entreprises.nom AS entreprise
             FROM clients
             JOIN entreprises ON clients.entreprise_id = entreprises.id
@@ -99,6 +115,7 @@ def get_client_details(client_id: int):
                 clients.adresse,
                 clients.telephone,
                 clients.contact,
+                clients.notes,
                 entreprises.nom AS entreprise,
                 network_infrastructure.fournisseur_internet,
                 network_infrastructure.type_lien,
@@ -151,27 +168,148 @@ def get_client_details(client_id: int):
     finally:
         connection.close()
 
+
+# ── GET /logs – Récupérer les logs avec pagination ───────
+@app.get("/logs")
+def get_logs(page: int = 1, limit: int = 50):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Compter le total pour calculer le nombre de pages
+            cursor.execute("SELECT COUNT(*) as total FROM logs")
+            total = cursor.fetchone()["total"]
+
+            # Calculer l'offset : page 1 = offset 0, page 2 = offset 50, etc.
+            offset = (page - 1) * limit
+
+            cursor.execute("""
+                SELECT id, action, description, client_nom, client_id, created_at
+                FROM logs
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, (limit, offset))
+
+            return {
+                "logs": cursor.fetchall(),
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "total_pages": (total + limit - 1) // limit
+            }
+    finally:
+        connection.close()
+
+# ── POST /clients – Créer un nouveau client ──────────────
+@app.post("/clients")
+def create_client(client_data: dict):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # 1. Créer une entreprise avec le même nom
+            cursor.execute("""
+                INSERT INTO entreprises (nom, adresse, telephone, contact)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                client_data.get("nom"),
+                client_data.get("adresse", ""),
+                client_data.get("telephone", ""),
+                client_data.get("contact", ""),
+            ))
+            entreprise_id = cursor.lastrowid
+
+            # 2. Créer le client lié à cette entreprise
+            cursor.execute("""
+                INSERT INTO clients (nom, adresse, telephone, contact, entreprise_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                client_data.get("nom"),
+                client_data.get("adresse", ""),
+                client_data.get("telephone", ""),
+                client_data.get("contact", ""),
+                entreprise_id,
+            ))
+            client_id = cursor.lastrowid
+
+            # Log création
+            insert_log(cursor, "CRÉATION", f"Nouveau client créé : {client_data.get('nom')}", client_data.get('nom'), client_id)
+
+            connection.commit()
+            return {"message": "Client créé avec succès", "id": client_id}
+
+    except pymysql.MySQLError as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur MySQL: {e}")
+    finally:
+        connection.close()
+
+# ── DELETE /clients/{id} – Supprimer un client ───────────
+@app.delete("/clients/{client_id}")
+def delete_client(client_id: int):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Récupérer le nom et l'entreprise_id avant suppression
+            cursor.execute("SELECT nom, entreprise_id FROM clients WHERE id = %s", (client_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Client non trouvé")
+            entreprise_id = row["entreprise_id"]
+            client_nom = row["nom"]
+
+            # Supprimer d'abord toutes les tables liées (FK sans CASCADE)
+            for table in [
+                "network_infrastructure",
+                "servers_and_storage",
+                "peripherals",
+                "telephony",
+                "security_organization",
+                "cloud_and_messaging",
+            ]:
+                cursor.execute(f"DELETE FROM {table} WHERE client_id = %s", (client_id,))
+
+            # Supprimer le client
+            cursor.execute("DELETE FROM clients WHERE id = %s", (client_id,))
+
+            # Supprimer l'entreprise liée si elle n'a plus d'autres clients
+            cursor.execute("SELECT COUNT(*) as nb FROM clients WHERE entreprise_id = %s", (entreprise_id,))
+            count = cursor.fetchone()["nb"]
+            if count == 0:
+                cursor.execute("DELETE FROM entreprises WHERE id = %s", (entreprise_id,))
+
+            # Log suppression
+            insert_log(cursor, "SUPPRESSION", f"Client supprimé : {client_nom} (ID: {client_id})", client_nom, client_id)
+
+            connection.commit()
+            return {"message": "Client supprimé avec succès"}
+
+    except pymysql.MySQLError as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur MySQL: {e}")
+    finally:
+        connection.close()
+
+# ── PUT /clients/{id} – Mettre à jour un client ──────────
 @app.put("/clients/{client_id}")
 def update_client(client_id: int, client_data: dict):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
 
-            # ── 1. TABLE clients ──────────────────────────────
+            # 1. TABLE clients
             cursor.execute("""
                 UPDATE clients
-                SET nom = %s, adresse = %s, telephone = %s, contact = %s
+                SET nom = %s, adresse = %s, telephone = %s, contact = %s, notes = %s
                 WHERE id = %s
             """, (
                 client_data.get('nom'),
                 client_data.get('adresse'),
                 client_data.get('telephone'),
                 client_data.get('contact'),
+                client_data.get('notes'),
                 client_id
             ))
 
-            # ── 2. TABLE network_infrastructure ───────────────
-            # INSERT si la ligne n'existe pas encore, UPDATE sinon
+            # 2. TABLE network_infrastructure
             cursor.execute("""
                 INSERT INTO network_infrastructure
                     (client_id, fournisseur_internet, type_lien, ip_publique, routeur,
@@ -209,7 +347,7 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('nat_ports'),
             ))
 
-            # ── 3. TABLE servers_and_storage ──────────────────
+            # 3. TABLE servers_and_storage
             cursor.execute("""
                 INSERT INTO servers_and_storage
                     (client_id, serveur_nas, adresse_ip_nas, login_nas,
@@ -230,7 +368,7 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('sauvegarde_quotidienne'),
             ))
 
-            # ── 4. TABLE peripherals ──────────────────────────
+            # 4. TABLE peripherals
             cursor.execute("""
                 INSERT INTO peripherals
                     (client_id, imprimante_modele, adresse_ip_imprimante,
@@ -249,7 +387,7 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('mot_de_passe_imprimante'),
             ))
 
-            # ── 5. TABLE telephony ────────────────────────────
+            # 5. TABLE telephony
             cursor.execute("""
                 INSERT INTO telephony
                     (client_id, solution_telephonie, url_telephonie, nombre_postes_ip)
@@ -265,7 +403,7 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('nombre_postes_ip'),
             ))
 
-            # ── 6. TABLE security_organization ────────────────
+            # 6. TABLE security_organization
             cursor.execute("""
                 INSERT INTO security_organization
                     (client_id, mfa_activee, gestion_centralisee, politique_mot_de_passe,
@@ -288,7 +426,7 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('pra_pca_existant'),
             ))
 
-            # ── 7. TABLE cloud_and_messaging ──────────────────
+            # 7. TABLE cloud_and_messaging
             cursor.execute("""
                 INSERT INTO cloud_and_messaging
                     (client_id, plateforme_365, domaine, hebergeur_dns,
@@ -308,6 +446,9 @@ def update_client(client_id: int, client_data: dict):
                 client_data.get('type_licence'),
                 client_data.get('sauvegarde_365_active'),
             ))
+
+            # Log modification
+            insert_log(cursor, "MODIFICATION", f"Fiche client mise à jour : {client_data.get('nom')}", client_data.get('nom'), client_id)
 
             connection.commit()
             return {"message": "Client mis à jour avec succès"}

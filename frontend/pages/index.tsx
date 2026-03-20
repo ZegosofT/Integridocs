@@ -1,118 +1,147 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
-
-interface Entreprise {
-  id: number;
-  nom: string;
-  adresse: string;
-  telephone: string;
-  contact: string;
-}
+import { useRouter } from "next/router";
+import Image from "next/image";
 
 interface Client {
   id: number;
   nom: string;
-  entreprise: string;
-  entreprise_id: number;
+  telephone: string;
+  contact: string;
+  created_at: string;
 }
 
+type SortKey = "nom" | "created_at";
+type SortDir = "asc" | "desc";
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
 const Home = () => {
-  const [entreprises, setEntreprises] = useState<Entreprise[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
-  const [openIds, setOpenIds] = useState<number[]>([]);
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const router = useRouter();
 
   useEffect(() => {
-    fetch("http://4.251.143.40:8000/entreprises")
-      .then((res) => res.json())
-      .then((data) => setEntreprises(data))
-      .catch((err) => console.error(err));
-
     fetch("http://4.251.143.40:8000/clients")
       .then((res) => res.json())
       .then((data) => setClients(data))
       .catch((err) => console.error(err));
   }, []);
 
-  const filteredEntreprises = entreprises.filter((e) =>
-    e.nom.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const autoOpen = search.trim().length > 0;
-
-  const toggleEntreprise = (id: number) => {
-    setOpenIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
   };
 
-  const isOpen = (id: number) => autoOpen || openIds.includes(id);
+  const getSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return " ↕";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  };
 
-  const getClientsForEntreprise = (entrepriseId: number) =>
-    clients.filter((c) => c.entreprise_id === entrepriseId);
+  const filtered = clients
+    .filter((c) => c.nom.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      let valA: string | number;
+      let valB: string | number;
+
+      if (sortKey === "nom") {
+        valA = a.nom.toLowerCase();
+        valB = b.nom.toLowerCase();
+      } else {
+        // Tri par date
+        valA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        valB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      }
+
+      if (valA < valB) return sortDir === "asc" ? -1 : 1;
+      if (valA > valB) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="accueil-page">
 
       <div className="accueil-hero">
+        <div className="accueil-logo">
+          <Image
+            src="/INTEGRITECH_Services_et_Solutions.png"
+            alt="Integritech Services & Solutions"
+            width={180}
+            height={55}
+            style={{ objectFit: "contain" }}
+            priority
+          />
+        </div>
         <h1 className="accueil-titre">INTEGRIDOCS</h1>
         <p className="accueil-description">
           Plateforme de gestion centralisée des clients et infrastructures IT — Integritech SAS
         </p>
-        <Link href="/clients" className="accueil-lien-clients">
-          👥 Voir tous les clients →
-        </Link>
       </div>
 
-      <div className="accueil-recherche">
+      <div className="accueil-toolbar">
         <input
           type="text"
           className="recherche-input"
-          placeholder="🔍  Rechercher une entreprise..."
+          placeholder="🔍  Rechercher un client..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="entreprises-liste">
-        {filteredEntreprises.length === 0 && (
-          <p className="liste-vide">Aucune entreprise trouvée pour &quot;{search}&quot;</p>
+      <div className="tous-clients-bloc">
+        {filtered.length === 0 ? (
+          <p className="liste-vide">Aucun client trouvé pour &quot;{search}&quot;</p>
+        ) : (
+          <table className="tous-clients-table">
+            <thead>
+              <tr>
+                <th
+                  className={`th-sortable ${sortKey === "nom" ? "th-active" : ""}`}
+                  onClick={() => handleSort("nom")}
+                >
+                  Nom du client{getSortIcon("nom")}
+                </th>
+                <th
+                  className={`th-sortable ${sortKey === "created_at" ? "th-active" : ""}`}
+                  onClick={() => handleSort("created_at")}
+                >
+                  Date d&apos;ajout{getSortIcon("created_at")}
+                </th>
+                <th>Téléphone</th>
+                <th>Contact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((client) => (
+                <tr
+                  key={client.id}
+                  className="client-row-clickable"
+                  onClick={() => router.push(`/clients/${client.id}`)}
+                >
+                  <td className="client-nom-cell">{client.nom}</td>
+                  <td className="client-date-cell">{formatDate(client.created_at)}</td>
+                  <td>{client.telephone}</td>
+                  <td>{client.contact}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-
-        {filteredEntreprises.map((entreprise) => {
-          const clientsDeLEntreprise = getClientsForEntreprise(entreprise.id);
-          const ouvert = isOpen(entreprise.id);
-
-          return (
-            <div key={entreprise.id} className="entreprise-bloc">
-              <div
-                className={`entreprise-header ${ouvert ? "entreprise-header-open" : ""}`}
-                onClick={() => toggleEntreprise(entreprise.id)}
-              >
-                <span className="entreprise-chevron">{ouvert ? "▾" : "▸"}</span>
-                <span className="entreprise-nom">{entreprise.nom}</span>
-                <span className="entreprise-count">
-                  {clientsDeLEntreprise.length} client{clientsDeLEntreprise.length > 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {ouvert && (
-                <div className="clients-dropdown">
-                  {clientsDeLEntreprise.length === 0 ? (
-                    <p className="liste-vide">Aucun client pour cette entreprise</p>
-                  ) : (
-                    clientsDeLEntreprise.map((client) => (
-                      <Link key={client.id} href={`/clients/${client.id}`} className="client-ligne">
-                        <span className="client-ligne-nom">{client.nom}</span>
-                        <span className="client-ligne-arrow">→</span>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {filtered.length > 0 && (
+          <p className="clients-count">
+            {filtered.length} client{filtered.length > 1 ? "s" : ""}
+            {search && ` pour "${search}"`}
+          </p>
+        )}
       </div>
     </div>
   );
