@@ -1,0 +1,557 @@
+/* ═══════════════════════════════════════════════════════
+   globals.css – Integridocs
+   Thème sombre – BTS CIEL IR – Tom Gustin – Integritech SAS
+═══════════════════════════════════════════════════════ */
+
+/* ── Reset & Base ────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #0F1923;
+  color: #D0D8E4;
+  font-size: 13px;
+}
+
+a {
+  text-decoration: none;
+  color: #00C896;
+}
+
+a:hover {
+  color: #00ffbe;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HERO & ACCUEIL COMMUN
+═══════════════════════════════════════════════════════ */
+
+.accueil-page {
+  padding: 32px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.accueil-hero {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.accueil-titre {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.accueil-description {
+  font-size: 12px;
+  color: #3A5060;
+  margin-bottom: 14px;
+}
+
+.accueil-lien-clients {
+  display: inline-block;
+  padding: 6px 16px;
+  background-color: #182534;
+  border: 1px solid #1E3048;
+  border-radius: 4px;
+  color: #00C896;
+  font-size: 12px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.accueil-lien-clients:hover {
+  background-color: #1E3048;
+  color: #00ffbe;
+  text-decoration: none;
+}
+
+/* ── Barre de recherche ── */
+.accueil-recherche {
+  margin-bottom: 12px;
+}
+
+.recherche-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #1E3048;
+  border-radius: 5px;
+  font-size: 13px;
+  outline: none;
+  background-color: #182534;
+  color: #D0D8E4;
+  transition: border 0.2s;
+}
+
+.recherche-input:focus {
+  border-color: #00C896;
+}
+
+.recherche-input::placeholder {
+  color: #3A5060;
+}
+
+.liste-vide {
+  color: #3A5060;
+  font-size: 11px;
+  font-style: italic;
+  padding: 10px 12px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LISTE ENTREPRISES ACCORDÉON (pages/index.tsx)
+═══════════════════════════════════════════════════════ */
+
+.entreprises-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.entreprise-bloc {
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid #1E3048;
+}
+
+/* Header cliquable */
+.entreprise-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background-color: #182534;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.entreprise-header:hover {
+  background-color: #1E3048;
+}
+
+.entreprise-header-open {
+  background-color: #1E3048;
+  border-bottom: 1px solid #00C896;
+}
+
+.entreprise-chevron {
+  color: #00C896;
+  font-size: 13px;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.entreprise-nom {
+  flex: 1;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.entreprise-count {
+  font-size: 11px;
+  color: #3A5060;
+  background-color: #0F1923;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Dropdown clients */
+.clients-dropdown {
+  background-color: #111E2C;
+  border-top: 1px solid #1E3048;
+}
+
+.client-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px 6px 38px;
+  border-bottom: 1px solid #182534;
+  color: #8FA3B1;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+
+.client-ligne:last-child {
+  border-bottom: none;
+}
+
+.client-ligne:hover {
+  background-color: #182534;
+  color: #00C896;
+  text-decoration: none;
+}
+
+.client-ligne-nom {
+  flex: 1;
+}
+
+.client-ligne-arrow {
+  color: #1E3048;
+  font-size: 11px;
+  transition: color 0.1s;
+}
+
+.client-ligne:hover .client-ligne-arrow {
+  color: #00C896;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PAGE TOUS LES CLIENTS (pages/clients/index.tsx)
+═══════════════════════════════════════════════════════ */
+
+.tous-clients-bloc {
+  border: 1px solid #1E3048;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.tous-clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tous-clients-table thead tr {
+  background-color: #182534;
+  border-bottom: 1px solid #00C896;
+}
+
+.tous-clients-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #3A5060;
+  font-weight: bold;
+}
+
+.tous-clients-table tbody tr {
+  border-bottom: 1px solid #182534;
+  transition: background 0.1s;
+}
+
+.tous-clients-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tous-clients-table tbody tr:hover {
+  background-color: #182534;
+}
+
+.tous-clients-table td {
+  padding: 6px 12px;
+  color: #8FA3B1;
+  vertical-align: middle;
+}
+
+.client-nom-cell {
+  color: #D0D8E4 !important;
+  font-weight: bold;
+}
+
+.client-entreprise-cell {
+  color: #3A5060 !important;
+  font-size: 11px;
+}
+
+.client-voir-btn {
+  color: #00C896;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.client-voir-btn:hover {
+  color: #00ffbe;
+  text-decoration: none;
+}
+
+.clients-count {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #3A5060;
+  background-color: #111E2C;
+  border-top: 1px solid #182534;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PAGE DÉTAIL CLIENT (pages/clients/[id]/index.tsx)
+═══════════════════════════════════════════════════════ */
+
+.client-page {
+  padding: 16px 20px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.retour-lien {
+  font-size: 11px;
+  color: #3A5060;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.retour-lien:hover {
+  color: #00C896;
+}
+
+.client-header {
+  background-color: #182534;
+  border-left: 3px solid #00C896;
+  border-radius: 4px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.client-nom {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.client-meta {
+  color: #3A5060;
+  font-size: 11px;
+}
+
+.chargement {
+  padding: 20px;
+  color: #3A5060;
+  font-size: 13px;
+}
+
+/* ── Alertes ── */
+.alert {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.alert-success {
+  background-color: #0A1F14;
+  color: #00C896;
+  border: 1px solid #00C896;
+}
+
+.alert-error {
+  background-color: #1F0A0A;
+  color: #E84C6A;
+  border: 1px solid #E84C6A;
+}
+
+/* ── Boutons ── */
+.boutons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.btn:hover    { opacity: 0.85; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-modifier    { background-color: #00C896; color: #0F1923; }
+.btn-enregistrer { background-color: #27AE60; color: #fff; }
+.btn-annuler     { background-color: #2A4060; color: #8FA3B1; }
+
+/* ── Sections ── */
+.section-bloc {
+  margin-bottom: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #1E3048;
+}
+
+.section-header {
+  padding: 3px 10px;
+  display: flex;
+  align-items: center;
+}
+
+.section-titre {
+  color: #0F1923;
+  font-size: 10px;
+  font-weight: bold;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.section-body {
+  background-color: #111E2C;
+}
+
+.section-reseau        .section-header { background-color: #2E5FA3; }
+.section-reseau                        { border-color: #2E5FA3; }
+.section-serveurs      .section-header { background-color: #27AE60; }
+.section-serveurs                      { border-color: #27AE60; }
+.section-peripheriques .section-header { background-color: #8E44AD; }
+.section-peripheriques                 { border-color: #8E44AD; }
+.section-telephonie    .section-header { background-color: #F39C12; }
+.section-telephonie                    { border-color: #F39C12; }
+.section-securite      .section-header { background-color: #E84C6A; }
+.section-securite                      { border-color: #E84C6A; }
+.section-cloud         .section-header { background-color: #00B4D8; }
+.section-cloud                         { border-color: #00B4D8; }
+
+/* ── Tableau compact champs ── */
+.champs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.champs-table tr {
+  border-bottom: 1px solid #182534;
+  transition: background 0.1s;
+}
+
+.champs-table tr:last-child { border-bottom: none; }
+.champs-table tr:hover      { background-color: #182534; }
+
+.champ-label {
+  width: 200px;
+  padding: 4px 10px;
+  font-weight: bold;
+  color: #3A5060;
+  font-size: 11px;
+  vertical-align: middle;
+  white-space: nowrap;
+  background-color: #0D1820;
+  border-right: 1px solid #182534;
+}
+
+.champ-valeur {
+  padding: 4px 10px;
+  color: #D0D8E4;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.champ-input {
+  width: 100%;
+  padding: 3px 7px;
+  border: 1px solid #1E3048;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+  outline: none;
+  background-color: #182534;
+  color: #D0D8E4;
+  transition: border 0.2s;
+}
+
+.champ-input:focus {
+  border-color: #00C896;
+  background-color: #1E3048;
+}
+
+
+
+/* ═══════════════════════════════════════════════════════
+   NAVBAR – bandeau permanent en haut
+   ═══════════════════════════════════════════════════════
+
+   Pour ajuster la navbar, modifie ces valeurs :
+
+   .navbar
+     height       → hauteur du bandeau        (défaut : 32px)
+     top          → distance depuis le haut    (défaut : 0)
+     left / right → distance depuis les bords  (défaut : 0 / 0 = pleine largeur)
+     padding      → espace intérieur vertical  (défaut : 0 8px)
+     font-size    → taille du texte            (défaut : 12px)
+     background   → couleur de fond            (défaut : #0D1820)
+     border-bottom → ligne séparatrice         (défaut : 1px solid #1E3048)
+     opacity      → transparence 0=invisible   (défaut : 1)
+     z-index      → priorité d'affichage       (défaut : 1000)
+
+   .navbar-inner
+     max-width    → largeur max du contenu     (défaut : 100% = pleine largeur)
+     gap          → espace entre les éléments  (défaut : 14px)
+     padding      → espace intérieur gauche    (défaut : 0 16px)
+
+   .page-wrapper
+     padding-top  → doit être >= hauteur navbar (défaut : 32px)
+                    si tu changes height navbar, change aussi padding-top ici
+
+═══════════════════════════════════════════════════════ */
+
+.navbar {
+  position: fixed;           /* reste en place même en scrollant */
+  top: 0;                    /* colle au bord haut – change pour descendre */
+  left: 0;                   /* bord gauche */
+  right: 0;                  /* bord droit – left+right=0 = pleine largeur */
+  height: 32px;              /* hauteur du bandeau */
+  background-color: #0D1820; /* couleur de fond */
+  border-bottom: 1px solid #1E3048; /* ligne séparatrice en bas */
+  display: flex;
+  align-items: center;
+  z-index: 1000;             /* passe au-dessus de tout */
+  font-size: 12px;
+  opacity: 1;                /* 0 = invisible, 1 = opaque */
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ← centre les éléments */
+  gap: 14px;
+  width: 100%;               /* ← prend toute la largeur */
+}
+
+.navbar-btn {
+  background: none;
+  border: none;
+  color: #3A5060;            /* couleur du bouton retour */
+  font-size: 12px;           /* taille texte bouton */
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.navbar-btn:hover {
+  color: #00C896;
+}
+
+.navbar-sep {
+  color: #1E3048;            /* couleur du séparateur | */
+  font-size: 11px;
+}
+
+.navbar-link {
+  color: #3A5060;            /* couleur des liens */
+  font-size: 12px;           /* taille texte liens */
+  transition: color 0.15s;
+}
+
+.navbar-link:hover {
+  color: #00C896;
+  text-decoration: none;
+}
+
+/* Décale le contenu vers le bas pour ne pas être caché par la navbar */
+.page-wrapper {
+  padding-top: 32px;         /* doit être >= height de .navbar */
+}
