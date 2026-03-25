@@ -139,7 +139,7 @@ const ClientDetails = () => {
 
   useEffect(() => {
     if (id) {
-      fetch(`http://4.251.143.40:8000/clients/${id}`)
+      fetch(`http://10.10.0.1:8000/clients/${id}`)
         .then((res) => res.json())
         .then((data) => setClient(data))
         .catch((err) => console.error(err));
@@ -157,7 +157,7 @@ const ClientDetails = () => {
     if (!client) return;
     setSaving(true);
     setSaveMsg("");
-    fetch(`http://4.251.143.40:8000/clients/${client.id}`, {
+    fetch(`http://10.10.0.1:8000/clients/${client.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(client),
@@ -176,7 +176,7 @@ const ClientDetails = () => {
   };
 
   const handleDelete = () => {
-    fetch(`http://4.251.143.40:8000/clients/${client.id}`, { method: "DELETE" })
+    fetch(`http://10.10.0.1:8000/clients/${client.id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then(() => router.push("/"))
       .catch((err) => console.error(err));
@@ -223,7 +223,8 @@ const ClientDetails = () => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
-      const noteLines = doc.splitTextToSize(client.notes, pageW - 20);
+      const cleanNotes = client.notes.replace(/→/g, '->').replace(/·/g, '-').replace(/[]/g, '"').replace(/['']/g, "'");
+      const noteLines = doc.splitTextToSize(cleanNotes, pageW - 20);
       doc.text(noteLines, 10, y);
       y += noteLines.length * 5 + 4;
     }
@@ -267,7 +268,13 @@ const ClientDetails = () => {
         if (field.type === "bool") {
           displayVal = (val === true || val === 1 || val === "1" || val === "true") ? "Oui" : "Non";
         } else {
-          displayVal = String(val);
+          // Remplacer les caractères Unicode non supportés par Helvetica
+          displayVal = String(val)
+            .replace(/→/g, "->")
+            .replace(/←/g, "<-")
+            .replace(/·/g, "-")
+            .replace(/[""]/g, '"')
+            .replace(/['']/g, "'");
         }
 
         // Fond alterné

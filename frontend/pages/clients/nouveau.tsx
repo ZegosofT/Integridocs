@@ -24,7 +24,7 @@ const NouveauClient = () => {
     }
     setSaving(true);
     setError("");
-    fetch("http://4.251.143.40:8000/clients", {
+    fetch("http://10.10.0.1:8000/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),

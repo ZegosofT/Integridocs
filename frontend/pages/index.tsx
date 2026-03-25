@@ -27,7 +27,7 @@ const Home = () => {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("http://4.251.143.40:8000/clients")
+    fetch("http://10.10.0.1:8000/clients")
       .then((res) => res.json())
       .then((data) => setClients(data))
       .catch((err) => console.error(err));
