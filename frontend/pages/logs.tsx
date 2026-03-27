@@ -50,7 +50,7 @@ const Logs = () => {
 
   const fetchLogs = (currentPage: number) => {
     setLoading(true);
-    fetch(`http://10.10.0.1:8000/logs?page=${currentPage}&limit=${LIMIT}`)
+    fetch(`/api/logs?page=${currentPage}&limit=${LIMIT}`)
       .then((res) => res.json())
       .then((data: LogsResponse) => {
         setLogs(data.logs);

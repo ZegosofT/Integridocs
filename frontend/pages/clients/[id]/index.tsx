@@ -139,7 +139,7 @@ const ClientDetails = () => {
 
   useEffect(() => {
     if (id) {
-      fetch(`http://10.10.0.1:8000/clients/${id}`)
+      fetch(`/api/clients/${id}`)
         .then((res) => res.json())
         .then((data) => setClient(data))
         .catch((err) => console.error(err));
@@ -157,7 +157,7 @@ const ClientDetails = () => {
     if (!client) return;
     setSaving(true);
     setSaveMsg("");
-    fetch(`http://10.10.0.1:8000/clients/${client.id}`, {
+    fetch(`/api/clients/${client.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(client),
@@ -176,7 +176,7 @@ const ClientDetails = () => {
   };
 
   const handleDelete = () => {
-    fetch(`http://10.10.0.1:8000/clients/${client.id}`, { method: "DELETE" })
+    fetch(`/api/clients/${client.id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then(() => router.push("/"))
       .catch((err) => console.error(err));
