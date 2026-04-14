@@ -3,6 +3,7 @@ import pymysql
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from auth import router as auth_router
 
 load_dotenv()
 
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router)
 
 def get_db_connection():
     try:
