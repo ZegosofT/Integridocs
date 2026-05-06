@@ -27,9 +27,9 @@ const Home = () => {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("api/clients")
+    fetch("/api/clients")
       .then((res) => res.json())
-      .then((data) => setClients(data))
+      .then((data) => Array.isArray(data) ? setClients(data) : setClients([]))
       .catch((err) => console.error(err));
   }, []);
 

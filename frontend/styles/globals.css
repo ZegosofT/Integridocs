@@ -752,3 +752,39 @@ a:hover {
   25%       { transform: translateX(-5px); }
   75%       { transform: translateX(5px); }
 }
+
+.logs-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table thead tr {
+  background-color: #1e293b;
+}
+
+.logs-table th,
+.logs-table td {
+  padding: 8px 12px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Largeurs fixes par colonne */
+.logs-table th:nth-child(1),
+.logs-table td:nth-child(1) { width: 170px; }  /* Date & heure */
+
+.logs-table th:nth-child(2),
+.logs-table td:nth-child(2) { width: 150px; }  /* Action */
+
+.logs-table th:nth-child(3),
+.logs-table td:nth-child(3) { width: auto; white-space: normal; }  /* Description */
+
+.logs-table th:nth-child(4),
+.logs-table td:nth-child(4) { width: 180px; }  /* Client */
+
+.log-desc {
+  white-space: normal; /* Description peut wrapper */
+}

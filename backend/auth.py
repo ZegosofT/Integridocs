@@ -1,30 +1,49 @@
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
-from fastapi.responses import JSONResponse
 import pyotp
 import bcrypt
 import os
 import time
 import secrets
+import pymysql
 
 router = APIRouter()
 
-# ── Config ──────────────────────────────────────────────────────────────
-# Ces valeurs doivent être dans votre .env
-TOTP_SECRET   = os.getenv("TOTP_SECRET", "QFF5LKJ5GJSQ5PHEYOUW3GKFLHAKXLVL")
-ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "tom.gustin@integritech.fr")
-ADMIN_HASH    = os.getenv("ADMIN_HASH",  "$2b$12$Piu8EUd4Mfeu.QHe.XQy8eYKGf4YoAFtXiODw5kMv5vj/vmRuEvKW")
-SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
-
-# Sessions en mémoire (simple, suffisant pour 1 utilisateur admin)
-# Format : { token: { "expires_at": timestamp } }
-_sessions: dict = {}
-
+# ── Config ───────────────────────────────────────────────────────────────
 SESSION_TTL = 8 * 3600  # 8 heures
 
-# ── Helpers ──────────────────────────────────────────────────────────────
-def create_session_token() -> str:
+# Sessions en mémoire : { token: { "expires_at": float, "user_id": int, "email": str } }
+_sessions: dict = {}
+
+# ── DB ───────────────────────────────────────────────────────────────────
+def get_db():
+    return pymysql.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+def get_user_by_email(email: str) -> dict | None:
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, nom, email, password_hash, totp_secret, actif FROM users WHERE email = %s",
+                (email,)
+            )
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+# ── Sessions ─────────────────────────────────────────────────────────────
+def create_session_token(user_id: int, email: str) -> str:
     token = secrets.token_urlsafe(48)
-    _sessions[token] = {"expires_at": time.time() + SESSION_TTL}
+    _sessions[token] = {
+        "expires_at": time.time() + SESSION_TTL,
+        "user_id": user_id,
+        "email": email,
+    }
     return token
 
 def is_valid_session(token: str) -> bool:
@@ -45,31 +64,34 @@ def require_auth(request: Request):
         raise HTTPException(status_code=401, detail="Non authentifié")
     return token
 
-# ── Routes ───────────────────────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────
 
 @router.post("/auth/login")
 def login(data: dict, response: Response):
-    """
-    Étape 1 : vérification email + mot de passe.
-    Retourne { "step": "totp" } si OK → le frontend affiche le champ TOTP.
-    """
     email    = data.get("email", "").strip().lower()
     password = data.get("password", "")
 
-    if email != ADMIN_EMAIL.lower():
+    user = get_user_by_email(email)
+
+    if not user or not user["actif"]:
         raise HTTPException(status_code=401, detail="Identifiants incorrects")
 
     try:
-        ok = bcrypt.checkpw(password.encode(), ADMIN_HASH.encode())
+        ok = bcrypt.checkpw(password.encode(), user["password_hash"].encode())
     except Exception:
         ok = False
 
     if not ok:
         raise HTTPException(status_code=401, detail="Identifiants incorrects")
 
-    # Crée un token temporaire "pré-auth" (valide 5 min, seulement pour TOTP)
     pre_token = secrets.token_urlsafe(32)
-    _sessions[f"pre_{pre_token}"] = {"expires_at": time.time() + 300, "type": "pre"}
+    _sessions[f"pre_{pre_token}"] = {
+        "expires_at": time.time() + 300,
+        "type": "pre",
+        "user_id": user["id"],
+        "email": user["email"],
+        "totp_secret": user["totp_secret"],
+    }
 
     response.set_cookie(
         key="integridocs_pre",
@@ -83,14 +105,9 @@ def login(data: dict, response: Response):
 
 @router.post("/auth/verify-totp")
 def verify_totp(data: dict, request: Request, response: Response):
-    """
-    Étape 2 : vérification du code TOTP.
-    Crée la session finale si OK.
-    """
     code      = str(data.get("code", "")).strip()
     pre_token = request.cookies.get("integridocs_pre")
 
-    # Vérifier le token pré-auth
     pre_key = f"pre_{pre_token}" if pre_token else None
     if not pre_key or pre_key not in _sessions:
         raise HTTPException(status_code=401, detail="Session expirée, recommencez")
@@ -98,14 +115,17 @@ def verify_totp(data: dict, request: Request, response: Response):
         del _sessions[pre_key]
         raise HTTPException(status_code=401, detail="Session expirée, recommencez")
 
-    # Vérifier le code TOTP (fenêtre de ±1 intervalle de 30s)
-    totp = pyotp.TOTP(TOTP_SECRET)
+    pre_sess     = _sessions[pre_key]
+    totp_secret  = pre_sess["totp_secret"]
+    user_id      = pre_sess["user_id"]
+    email        = pre_sess["email"]
+
+    totp = pyotp.TOTP(totp_secret)
     if not totp.verify(code, valid_window=1):
         raise HTTPException(status_code=401, detail="Code incorrect ou expiré")
 
-    # Tout est bon → créer la session finale
     del _sessions[pre_key]
-    session_token = create_session_token()
+    session_token = create_session_token(user_id, email)
 
     response.delete_cookie("integridocs_pre")
     response.set_cookie(
@@ -129,5 +149,5 @@ def logout(request: Request, response: Response):
 
 @router.get("/auth/me")
 def me(token: str = Depends(require_auth)):
-    """Vérifie si la session est valide (utilisé par le frontend au chargement)."""
-    return {"authenticated": True, "email": ADMIN_EMAIL}
+    sess = _sessions.get(token)
+    return {"authenticated": True, "email": sess["email"] if sess else ""}

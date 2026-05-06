@@ -51,6 +51,16 @@ interface Client {
 
 const SECTIONS = [
   {
+    title: "Informations générales", colorClass: "section-reseau",
+    fields: [
+      { key: "nom",        label: "Nom du client",  type: "text" },
+      { key: "entreprise", label: "Entreprise",      type: "text" },
+      { key: "adresse",    label: "Adresse",         type: "text" },
+      { key: "telephone",  label: "Téléphone",       type: "text" },
+      { key: "contact",    label: "Contact",         type: "text" },
+    ],
+  },
+  {
     title: "Réseau & Infrastructure", colorClass: "section-reseau",
     fields: [
       { key: "fournisseur_internet",   label: "Fournisseur Internet",   type: "text" },

@@ -6,6 +6,7 @@ const NouveauClient = () => {
   const router = useRouter();
   const [form, setForm] = useState({
     nom: "",
+    entreprise: "",
     adresse: "",
     telephone: "",
     contact: "",
@@ -32,7 +33,6 @@ const NouveauClient = () => {
       .then((res) => res.json())
       .then((data) => {
         setSaving(false);
-        // Rediriger vers la fiche du nouveau client
         router.push(`/clients/${data.id}`);
       })
       .catch((err) => {
@@ -74,6 +74,19 @@ const NouveauClient = () => {
                       onChange={handleChange}
                       placeholder="Nom de l'entreprise cliente"
                       autoFocus
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="champ-label">Entreprise</td>
+                  <td className="champ-valeur">
+                    <input
+                      className="champ-input"
+                      type="text"
+                      name="entreprise"
+                      value={form.entreprise}
+                      onChange={handleChange}
+                      placeholder="Raison sociale ou groupe"
                     />
                   </td>
                 </tr>
